@@ -1,0 +1,257 @@
+---
+title: "Asessment 3"
+author: "Leisha and Shreeya"
+date: "9/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###In this step we loaded the different packages from the library to ensure that we give access to a set of commands that are not avialble in the base set R functions. Below are different packages used for various functions like model, mapping, transform, visualize the datasets in a more understandable way.
+
+```{r}
+library("tidyverse")
+#install.packages("tidymodels")
+library("tidymodels")
+#install.packages("ranger")
+library("ranger")
+library("magrittr")
+```
+
+
+###This is the dataset we have chosen for analysis. It is a machine learning and data science community which publishes the datasets and builds the model. This is the dataset which talks about the ratings of varieties of wine. Vivino Rating System is used to rate these wines in order to separate the good wines from bad ones. We have loaded the dataset and named it wine_ratings by using the following R codes.
+
+
+```{r}
+wine_ratings_raw<- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-28/winemag-data-130k-v2.csv')
+```
+###This dataset has 11 variables in total out of which 9 are character variable and 2 are numeric variables.A well-defined description of all the rows and columns are given so, it is easier for us to understand what actually the dataset is and how the variables are co-related with each other.
+
+
+###Data Cleaning: This is one of the important step in data analysis. Before starting our data analysis, some cleanings are to be done in any datasets whether it be editing the variables name or changing the character variables into factor for better analysis. We have filtered the price range below 300 as most of the wines falls under this category and it is easier to understand as well as analyse the described relationships. Likewise, we have filtered the variety as well because there were extreme datas in it. The test reduced price dataset we named it wine_ratings_raw. However, in our case we have converted the nine character variables i.e. country of origin, description, designation, province, region_1, taster_name, title, variety and winery into factor variable.
+
+```{r}
+wine_ratings_raw%>%
+  count(price>300)
+  
+```
+```{r}
+wine_ratings_raw%>%
+  count(variety)%>%
+  filter(n>100)%>%
+  arrange(n)
+
+
+```
+
+
+test reduced price dataset
+
+```{r}
+wine_ratings<- wine_ratings_raw%>%
+  arrange(price)%>%
+  filter(price < 301)%>%
+  drop_na(price, country, variety, taster_name, points)
+
+```
+
+
+
+character into factor
+```{r}
+wine_ratings %>%
+str(wine_ratings) 
+country_fct <- as.factor(wine_ratings$country)
+description_fct <- as.factor(wine_ratings$description)
+designation_fct <- as.factor(wine_ratings$designation)
+province_fct <- as.factor(wine_ratings$province)
+region_1_fct <- as.factor(wine_ratings$region_1)
+taster_name_fct <- as.factor(wine_ratings$taster_name)
+title_fct <- as.factor(wine_ratings$title)
+variety_fct <- as.factor(wine_ratings$variety)
+winery_fct <- as.factor(wine_ratings$winery)
+```
+
+###In this dataset, we know the price of winery, the number of points wine enthusiast rated the wine, taster_name as well as country is easier for analysis. So we are going to find out the answer to the problem with the help of predictive questions as mentioned belows: 
+
+### Major Question: Can we predict the points of the wine? On what basis?
+
+###sub-questions:
+###Question Number 1: How many winery are there? > How many wines from each country ?
+###Question Number 2:Is there a  relation between price and points?
+###Question Number 3: Is there relation between taster_name, points/price?
+###Question Number 4: Is there a relation between country and price?
+###Question Number 5: Is the relation between country and price dependent on points?
+
+###With the help of these predictive questions we are trying to find out the patterns in a relationship,which variables are responsible for predicting points of any wine that are in the market and not even released in the market.
+
+
+```{r}
+wine_ratings %>%
+summary(wine_ratings)
+skim(wine_ratings)
+```
+
+###QN NUMBER 1 These dataset shows us the how many different types of wines are originated from each countries. Representation can be seen in the form of a simple table.
+
+```{r}
+wine_ratings %>%
+count(country)
+```
+
+###These are the different varieties and their quantities found in the given dataset.
+```{r}
+wine_ratings %>%
+select(variety) %>%
+count (variety, sort=TRUE)
+
+```
+###This shows the number wines reviewed by taster_name.
+```{r}
+wine_ratings %>%
+count(taster_name)
+```
+
+###QN NUMBER: 2 relation between price and points, we can see from the graph that with the increase in the price of the wine, the points seem to increase. What we can say is there is a positive linear relationship between price and points.
+
+```{r}
+wine_ratings %>%
+ggplot(aes(price, points)) +
+geom_count()+
+geom_smooth(method = lm, se= FALSE)
+```
+
+###Question  Number 3: Is there a relation between taster_name and points?
+From this graph, we can testers are generally consistent and most of their scores fall 85 - 92. However each taster has their own scale with only 2 of them ever scoring 100 and Carrie Dykes and Fiona Adams may be a particularly hard raters or they have been receiving power quality wine. 
+
+
+```{r}
+wine_ratings %>%
+  ggplot(aes(points, taster_name)) +
+geom_violin(fill = "blue", scale = "area")+
+xlim(80, 100)
+geom_smooth(method = lm, se= FALSE)
+labs(x="points",y= "taster_name", title = " Relation between taster_name and points",caption = "Data Visualisation: Graph")
+```
+ 
+### Qn Number 3a Is there a relation between country and points?
+
+```{r}
+wine_ratings %>%
+ggplot(aes(points, country)) +
+geom_count()+
+geom_smooth(method = lm, se= FALSE)
+labs(x="points",y= "country", title = " Relation between country and points",caption = "Data Visualisation: Graph")
+```
+
+###The above graph shows that France and US have the highest scoring of wine but Italy should also be included as these 3 countries show the highest volumes of wine with ratings over 90.
+
+
+
+###Question Number 3b: Is there a  relation between price and country? 
+
+
+```{r}
+wine_ratings %>%
+ggplot(aes(price,country)) +
+geom_count()+
+xlim(1, 300)
+geom_smooth(method = lm, se= FALSE)
+labs(x="price",y= "country", title = " Relation between price and country",caption = "Data Visualisation: Graph")
+```
+###The above graph shows that the marjority of wine from all countries is priced below $100. It also shows only a few countries, like US, Spain, Portugal, Italy, Germany and France have significant volumes of wines that are priced throughout the whole range and a number of countries do not exceed $100 at all. 
+
+
+
+###Question Number 4: Is the relation between taster name and price dependent on points?
+
+```{r}
+wine_ratings %>%
+ggplot(aes(price, points, color= taster_name)) +
+geom_count()+
+geom_smooth(method = lm, se= FALSE)+
+  ylim(80,100)
+labs(x="price",y= "points", title = " Relation between taster_name and price dependent on points",caption = "Data Visualisation: Graph")
+```
+
+###Qn Number 5 Is the relation between country and price dependent on points?
+```{r}
+wine_ratings %>%
+ggplot(aes(price, points, color=country)) +
+geom_count()+
+geom_smooth(method = lm, se= FALSE)+
+  ylim(80,100)
+labs(x="points",y= "points", title = " Relation between country and price dependent on points",caption = "Data Visualisation: Graph")
+```
+
+
+### The graph above shows that all countries show a positive linear relationship supported by US and France with a strong lines.Overall, as the price increases so does the points.
+
+
+###After analysing all these variables like price, taster_name and country, we knew that price and country is dependent on points as we can see a linear relationship among them with a straight line passing from x-axis to y-axis.We will then build a model to make if our predictions are correct or not. Firstly, we have split the dataset into training and testing datasets which is followed by pre-processing of the data. In this step we set the recipe and got the outcome. Price and country were predictors and points was the output variable in our case.We then, built a model where three important things are mode, model type and engine. The mode is regression, model type is linear regression and engine is lm. Since, our output variable is numeric so we have used regression. We have fitted the model and have created the workflow.In any types of wine businesses, these models will be best suited to find that points of wine can be found out by so many variables like price, country and taster_name. 
+
+We pre-processed the data
+```{r}
+wine_ratings_split <- initial_split(wine_ratings)
+wine_ratings_train <- training(wine_ratings_split)
+wine_ratings_test <- testing(wine_ratings_split)
+```
+
+Build a model
+```{r}
+wine_ratings_recipe <- recipe(points ~ country + price, data = wine_ratings_train) 
+summary(wine_ratings_recipe)
+```
+
+Write recipe steps 
+```{r}
+wine_ratings_recipe <- wine_ratings_recipe %>%
+  step_center(all_numeric(), -all_outcomes()) %>% 
+  step_scale(all_numeric(), -all_outcomes()) %>% 
+  step_corr(all_numeric())
+```
+
+
+Get ready with prep
+
+```{r}
+wine_ratings_prep <- prep(wine_ratings_recipe, training = wine_ratings_train)
+```
+
+Bake the recipe
+
+```{r}
+wine_bake <- bake(wine_ratings_prep, wine_ratings_train)
+```
+
+Build the model
+We will use regression since our output variable is numeric.
+
+Set up the model
+
+```{r}
+model1 <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+```
+
+Fit the model
+
+```{r}
+model1_fitted <- model1 %>%
+  fit(points ~ country + price, data = wine_bake)
+
+```
+
+```{r}
+workflow <- workflow() %>%
+  add_recipe(wine_ratings_recipe) %>%
+  add_model(model1)
+```
+
+---
+THE END
+---
